@@ -7,65 +7,140 @@ Original file is located at
     https://colab.research.google.com/drive/1df7yn5bXtv4U5UQhmw5oDA-3VjCi1VH2
 """
 
+import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import folium
-from scipy.spatial.distance import euclidean
-from sklearn.cluster import KMeans
+import plotly.express as px
+from geopy.distance import geodesic
 
-def cargar_datos(archivo):
-    return pd.read_csv(archivo)
+# Cargar datos
+@st.cache_data
+def cargar_datos():
+    return pd.read_csv("analisis_clientes.csv")
 
-def correlacion_edad_ingreso(df):
-    sns.lmplot(x='Edad', y='Ingreso_Anual', data=df)
-    plt.title('Correlación entre Edad e Ingreso Anual')
-    plt.show()
+df = cargar_datos()
 
-def correlacion_segmentada(df, segmento):
-    sns.lmplot(x='Edad', y='Ingreso_Anual', hue=segmento, data=df)
-    plt.title(f'Correlación entre Edad e Ingreso Anual segmentado por {segmento}')
-    plt.show()
+# Verificar columnas numéricas
+df_numeric = df.select_dtypes(include=['number'])
 
-def mapa_ubicacion(df, filtro=None):
-    mapa = folium.Map(location=[df['Latitud'].mean(), df['Longitud'].mean()], zoom_start=5)
-    if filtro:
-        df = df[df[filtro[0]].between(filtro[1], filtro[2])]
-    for _, row in df.iterrows():
-        folium.Marker([row['Latitud'], row['Longitud']], popup=row['Nombre']).add_to(mapa)
-    return mapa
+# Sidebar con opciones
+opciones = [
+    "Visión General",
+    "Análisis de Correlación",
+    "Mapas de Ubicación",
+    "Mapas Personalizados",
+    "Análisis de Clúster",
+    "Gráficos de Barras",
+    "Mapa de Calor",
+    "Cálculo de Distancias"
+]
+opcion = st.sidebar.radio("Selecciona un análisis", opciones)
 
-def clustering_frecuencia(df, n_clusters=3):
-    kmeans = KMeans(n_clusters=n_clusters)
-    df['Cluster'] = kmeans.fit_predict(df[['Frecuencia_Compra']])
-    sns.scatterplot(x='Edad', y='Ingreso_Anual', hue='Cluster', data=df, palette='viridis')
-    plt.title('Clúster de clientes según frecuencia de compra')
-    plt.show()
+# Diccionario de funciones
+def vision_general():
+    st.title("📊 Análisis de Datos de Clientes")
+    st.write("Datos cargados con éxito. Vista previa:")
+    st.dataframe(df.head())
 
-def grafico_barras(df):
-    df.groupby(['Genero', 'Frecuencia_Compra']).size().unstack().plot(kind='bar', stacked=True)
-    plt.title('Distribución de clientes por Género y Frecuencia de Compra')
-    plt.show()
+def analisis_correlacion():
+    st.title("🔗 Análisis de Correlación")
 
-def mapa_calor_ingresos(df):
-    pivot = df.pivot_table(values='Ingreso_Anual', index='Latitud', columns='Longitud')
-    sns.heatmap(pivot, cmap='coolwarm')
-    plt.title('Mapa de calor de Ingresos')
-    plt.show()
+    # Matriz de correlación global
+    st.subheader("Matriz de Correlación Global")
+    matriz_corr = df_numeric.corr()
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(matriz_corr, annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+    st.pyplot(fig)
 
-def calcular_distancias(df):
-    top_ingresos = df.nlargest(5, 'Ingreso_Anual')
-    distancias = {(row1['Nombre'], row2['Nombre']): euclidean((row1['Latitud'], row1['Longitud']), 
-                                                              (row2['Latitud'], row2['Longitud']))
-                  for _, row1 in top_ingresos.iterrows() for _, row2 in top_ingresos.iterrows() if row1['Nombre'] != row2['Nombre']}
-    return distancias
+    # Correlación segmentada
+    st.subheader("Correlación por Género")
+    genero = st.selectbox("Selecciona el género", df["Genero"].unique())
+    df_genero = df[df["Genero"] == genero].select_dtypes(include=['number'])
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(df_genero.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+    st.pyplot(fig)
 
-if __name__ == "__main__":
-    df = cargar_datos('analisis_clientes.csv')
-    correlacion_edad_ingreso(df)
-    correlacion_segmentada(df, 'Genero')
-    mapa_ubicacion(df).save('mapa_general.html')
-    clustering_frecuencia(df)
-    grafico_barras(df)
-    mapa_calor_ingresos(df)
-    print(calcular_distancias(df))
+def mapas_ubicacion():
+    st.title("📍 Mapas de Ubicación de Clientes")
+    mapa_global = px.scatter_mapbox(
+        df, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso"],
+        color="Genero", zoom=3, mapbox_style="open-street-map"
+    )
+    st.plotly_chart(mapa_global)
+
+    # Mapa segmentado
+    genero = st.selectbox("Selecciona género para el mapa", df["Genero"].unique())
+    df_genero = df[df["Genero"] == genero]
+    mapa_genero = px.scatter_mapbox(
+        df_genero, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso"],
+        zoom=3, mapbox_style="open-street-map"
+    )
+    st.plotly_chart(mapa_genero)
+
+def mapas_personalizados():
+    st.title("🗺️ Mapas Personalizados")
+    
+    # Selección de variables
+    var1 = st.selectbox("Variable 1", df.columns)
+    var2 = st.selectbox("Variable 2", df.columns)
+    
+    # Rango de valores
+    min1, max1 = st.slider(f"Rango para {var1}", float(df[var1].min()), float(df[var1].max()), (float(df[var1].min()), float(df[var1].max())))
+    min2, max2 = st.slider(f"Rango para {var2}", float(df[var2].min()), float(df[var2].max()), (float(df[var2].min()), float(df[var2].max())))
+
+    # Filtrar datos
+    df_filtrado = df[(df[var1] >= min1) & (df[var1] <= max1) & (df[var2] >= min2) & (df[var2] <= max2)]
+    
+    # Mostrar mapa
+    mapa_custom = px.scatter_mapbox(df_filtrado, lat="Latitud", lon="Longitud", color=var1, zoom=3, mapbox_style="open-street-map")
+    st.plotly_chart(mapa_custom)
+
+def analisis_cluster():
+    st.title("📈 Análisis de Clúster")
+    df["Frecuencia_Compra"] = pd.cut(df["Frecuencia_Compra"], bins=3, labels=["Baja", "Media", "Alta"])
+    cluster_plot = px.scatter(df, x="Edad", y="Ingreso", color="Frecuencia_Compra")
+    st.plotly_chart(cluster_plot)
+
+def graficos_barras():
+    st.title("📊 Gráfico de Barras por Género y Frecuencia de Compra")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.countplot(x="Genero", hue="Frecuencia_Compra", data=df, ax=ax)
+    st.pyplot(fig)
+
+def mapa_calor():
+    st.title("🔥 Mapa de Calor de Ingresos")
+    df["Ingreso_Categoría"] = pd.cut(df["Ingreso"], bins=5, labels=["Muy Bajo", "Bajo", "Medio", "Alto", "Muy Alto"])
+    mapa_calor = px.density_mapbox(df, lat="Latitud", lon="Longitud", z="Ingreso", radius=10, mapbox_style="stamen-terrain")
+    st.plotly_chart(mapa_calor)
+
+def calculo_distancias():
+    st.title("📏 Cálculo de Distancias entre Compradores de Mayores Ingresos")
+
+    # Filtrar compradores con los mayores ingresos
+    df_top = df.nlargest(10, "Ingreso")
+
+    # Calcular distancias
+    distancias = [
+        (df_top.iloc[i]["ID"], df_top.iloc[j]["ID"], geodesic((df_top.iloc[i]["Latitud"], df_top.iloc[i]["Longitud"]), 
+                                                               (df_top.iloc[j]["Latitud"], df_top.iloc[j]["Longitud"])).km)
+        for i in range(len(df_top)) for j in range(i + 1, len(df_top))
+    ]
+
+    # Mostrar resultados
+    distancias_df = pd.DataFrame(distancias, columns=["Cliente 1", "Cliente 2", "Distancia (km)"])
+    st.dataframe(distancias_df)
+
+# Ejecutar la función seleccionada
+funciones = [
+    vision_general, 
+    analisis_correlacion, 
+    mapas_ubicacion, 
+    mapas_personalizados, 
+    analisis_cluster, 
+    graficos_barras, 
+    mapa_calor, 
+    calculo_distancias
+]
+funciones[opciones.index(opcion)]()
