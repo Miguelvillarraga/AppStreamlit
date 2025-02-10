@@ -51,6 +51,8 @@ def grafico_barras(df):
 
 # Mapa de calor
 def mapa_calor(df):
+    df = df.copy()  # Evita modificar el DataFrame original
+    df = df.interpolate()  # Rellena valores NaN con interpolación
     df_numerico = df.select_dtypes(include=['number'])  # Filtrar solo columnas numéricas
     matriz_corr = df_numerico.corr()  # Calcular correlación
     st.write(matriz_corr)  # Mostrar la matriz en Streamlit
