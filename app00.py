@@ -31,7 +31,7 @@ def preprocesar_datos(df):
 
 # Análisis de correlación
 def analizar_correlacion(df):
-    corr_global = df[['Edad', 'Ingreso_Anual']].corr()
+    corr_global = df[['Edad', 'Ingreso_Anual_USD']].corr()
     return corr_global
 
 # Mapa de ubicación
