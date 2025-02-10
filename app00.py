@@ -51,9 +51,9 @@ def grafico_barras(df):
 
 # Mapa de calor
 def mapa_calor(df):
-    matriz_corr = df.corr()
-    plt.figure(figsize=(8, 6))
-    return sns.heatmap(matriz_corr, annot=True, cmap='coolwarm')
+    df_numerico = df.select_dtypes(include=['number'])  # Filtrar solo columnas numéricas
+    matriz_corr = df_numerico.corr()  # Calcular correlación
+    st.write(matriz_corr)  # Mostrar la matriz en Streamlit
 
 # Cálculo de distancias
 def calcular_distancias(df):
