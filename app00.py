@@ -56,8 +56,8 @@ def analisis_correlacion():
 
     # Correlación segmentada
     st.subheader("Correlación por Género")
-    genero = st.selectbox("Selecciona el género", df["Genero"].unique())
-    df_genero = df[df["Genero"] == genero].select_dtypes(include=['number'])
+    genero = st.selectbox("Selecciona el género", df["Género"].unique())
+    df_genero = df[df["Género"] == genero].select_dtypes(include=['number'])
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.heatmap(df_genero.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
     st.pyplot(fig)
@@ -65,16 +65,16 @@ def analisis_correlacion():
 def mapas_ubicacion():
     st.title("📍 Mapas de Ubicación de Clientes")
     mapa_global = px.scatter_mapbox(
-        df, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso"],
-        color="Genero", zoom=3, mapbox_style="open-street-map"
+        df, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso_Anual_USD"],
+        color="Género", zoom=3, mapbox_style="open-street-map"
     )
     st.plotly_chart(mapa_global)
 
     # Mapa segmentado
-    genero = st.selectbox("Selecciona género para el mapa", df["Genero"].unique())
-    df_genero = df[df["Genero"] == genero]
+    genero = st.selectbox("Selecciona género para el mapa", df["Género"].unique())
+    df_genero = df[df["Género"] == genero]
     mapa_genero = px.scatter_mapbox(
-        df_genero, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso"],
+        df_genero, lat="Latitud", lon="Longitud", hover_data=["Edad", "Ingreso_Anual_USD"],
         zoom=3, mapbox_style="open-street-map"
     )
     st.plotly_chart(mapa_genero)
@@ -100,7 +100,7 @@ def mapas_personalizados():
 def analisis_cluster():
     st.title("📈 Análisis de Clúster")
     df["Frecuencia_Compra"] = pd.cut(df["Frecuencia_Compra"], bins=3, labels=["Baja", "Media", "Alta"])
-    cluster_plot = px.scatter(df, x="Edad", y="Ingreso", color="Frecuencia_Compra")
+    cluster_plot = px.scatter(df, x="Edad", y="Ingreso_Anual_USD", color="Frecuencia_Compra")
     st.plotly_chart(cluster_plot)
 
 def graficos_barras():
