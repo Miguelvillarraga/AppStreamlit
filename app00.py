@@ -111,8 +111,8 @@ def graficos_barras():
 
 def mapa_calor():
     st.title("🔥 Mapa de Calor de Ingresos")
-    df["Ingreso_Categoría"] = pd.cut(df["Ingreso"], bins=5, labels=["Muy Bajo", "Bajo", "Medio", "Alto", "Muy Alto"])
-    mapa_calor = px.density_mapbox(df, lat="Latitud", lon="Longitud", z="Ingreso", radius=10, mapbox_style="stamen-terrain")
+    df["Ingreso_Categoría"] = pd.cut(df["Ingreso_Anual_USD"], bins=5, labels=["Muy Bajo", "Bajo", "Medio", "Alto", "Muy Alto"])
+    mapa_calor = px.density_mapbox(df, lat="Latitud", lon="Longitud", z="Ingreso_Anual_USD", radius=10, mapbox_style="stamen-terrain")
     st.plotly_chart(mapa_calor)
 
 def calculo_distancias():
