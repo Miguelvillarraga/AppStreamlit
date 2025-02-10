@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import streamlit as st
 from sklearn.cluster import KMeans
 from scipy.spatial.distance import pdist, squareform
-from google.colab import files
 
 # Cargar datos desde URL o archivo
 def cargar_datos(url=None):
