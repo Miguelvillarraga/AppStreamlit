@@ -111,9 +111,15 @@ def graficos_barras():
 
 def mapa_calor():
     st.title("🔥 Mapa de Calor de Ingresos")
-    df["Ingreso_Categoría"] = pd.cut(df["Ingreso_Anual_USD"], bins=5, labels=["Muy Bajo", "Bajo", "Medio", "Alto", "Muy Alto"])
-    mapa_calor = px.density_mapbox(df, lat="Latitud", lon="Longitud", z="Ingreso_Anual_USD", radius=10, mapbox_style="stamen-terrain")
-    st.plotly_chart(mapa_calor)
+
+    # Filtrar solo columnas numéricas
+    df_numeric = df.select_dtypes(include=['number'])
+
+    # Crear una matriz de correlación sin verificar la cantidad de columnas
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(df_numeric.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+    st.pyplot(fig)
+
 
 def calculo_distancias():
     st.title("📏 Cálculo de Distancias entre Compradores de Mayores Ingresos")
