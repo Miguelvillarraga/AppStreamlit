@@ -8,93 +8,64 @@ Original file is located at
 """
 
 import pandas as pd
-import numpy as np
-import plotly.express as px
-import seaborn as sns
 import matplotlib.pyplot as plt
-import streamlit as st
+import seaborn as sns
+import folium
+from scipy.spatial.distance import euclidean
 from sklearn.cluster import KMeans
-from scipy.spatial.distance import pdist, squareform
 
-# Cargar datos desde URL o archivo
-def cargar_datos(url=None):
-    if url:
-        return pd.read_csv(url)
-    else:
-        archivo_subido = files.upload()
-        nombre_archivo = list(archivo_subido.keys())[0]
-        return pd.read_csv(nombre_archivo)
+def cargar_datos(archivo):
+    return pd.read_csv(archivo)
 
-# Preprocesar datos
-def preprocesar_datos(df):
-    return df.interpolate()  # Interpolación de valores faltantes
+def correlacion_edad_ingreso(df):
+    sns.lmplot(x='Edad', y='Ingreso_Anual', data=df)
+    plt.title('Correlación entre Edad e Ingreso Anual')
+    plt.show()
 
-# Análisis de correlación
-def analizar_correlacion(df):
-    corr_global = df[['Edad', 'Ingreso_Anual_USD']].corr()
-    return corr_global
+def correlacion_segmentada(df, segmento):
+    sns.lmplot(x='Edad', y='Ingreso_Anual', hue=segmento, data=df)
+    plt.title(f'Correlación entre Edad e Ingreso Anual segmentado por {segmento}')
+    plt.show()
 
-# Mapa de ubicación
-def generar_mapa(df, filtro=None):
-    df_filtrado = df if filtro is None else df.query(filtro)
-    return px.scatter_mapbox(df_filtrado, lat='Latitud', lon='Longitud', color='Género', zoom=3, mapbox_style='carto-positron')
+def mapa_ubicacion(df, filtro=None):
+    mapa = folium.Map(location=[df['Latitud'].mean(), df['Longitud'].mean()], zoom_start=5)
+    if filtro:
+        df = df[df[filtro[0]].between(filtro[1], filtro[2])]
+    for _, row in df.iterrows():
+        folium.Marker([row['Latitud'], row['Longitud']], popup=row['Nombre']).add_to(mapa)
+    return mapa
 
-# Análisis de clúster
-def analizar_cluster(df):
-    modelo = KMeans(n_clusters=3, random_state=42, n_init=10).fit(df[['Frecuencia_Compra']])
-    df['Cluster'] = modelo.labels_
-    return df
+def clustering_frecuencia(df, n_clusters=3):
+    kmeans = KMeans(n_clusters=n_clusters)
+    df['Cluster'] = kmeans.fit_predict(df[['Frecuencia_Compra']])
+    sns.scatterplot(x='Edad', y='Ingreso_Anual', hue='Cluster', data=df, palette='viridis')
+    plt.title('Clúster de clientes según frecuencia de compra')
+    plt.show()
 
-# Gráficos de barra
 def grafico_barras(df):
-    return sns.countplot(data=df, x='Género', hue='Frecuencia_Compra')
+    df.groupby(['Genero', 'Frecuencia_Compra']).size().unstack().plot(kind='bar', stacked=True)
+    plt.title('Distribución de clientes por Género y Frecuencia de Compra')
+    plt.show()
 
-# Mapa de calor
-def mapa_calor(df):
-    df = df.copy()  # Evita modificar el DataFrame original
-    df['Edad'] = pd.to_numeric(df['Edad'], errors='coerce')
-    df['Ingreso_Anual_USD'] = pd.to_numeric(df['Ingreso_Anual_USD'], errors='coerce')
-    df['Frecuencia_Compra'] = pd.to_numeric(df['Frecuencia_Compra'], errors='coerce')
-    df['Latitud'] = pd.to_numeric(df['Latitud'], errors='coerce')
-    df['Longitud'] = pd.to_numeric(df['Longitud'], errors='coerce')
-    df = df.interpolate()  # Rellena valores NaN con interpolación
-    df_numerico = df.select_dtypes(include=['number'])  # Filtrar solo columnas numéricas
-    st.write(df.dtypes)
-    matriz_corr = df_numerico.corr()  # Calcular correlación
-    st.write(matriz_corr)  # Mostrar la matriz en Streamlit
+def mapa_calor_ingresos(df):
+    pivot = df.pivot_table(values='Ingreso_Anual', index='Latitud', columns='Longitud')
+    sns.heatmap(pivot, cmap='coolwarm')
+    plt.title('Mapa de calor de Ingresos')
+    plt.show()
 
-# Cálculo de distancias
 def calcular_distancias(df):
-    compradores_altos = df.nlargest(5, 'Ingreso_Anual_USD')
-    distancias = squareform(pdist(compradores_altos[['Latitud', 'Longitud']]))
+    top_ingresos = df.nlargest(5, 'Ingreso_Anual')
+    distancias = {(row1['Nombre'], row2['Nombre']): euclidean((row1['Latitud'], row1['Longitud']), 
+                                                              (row2['Latitud'], row2['Longitud']))
+                  for _, row1 in top_ingresos.iterrows() for _, row2 in top_ingresos.iterrows() if row1['Nombre'] != row2['Nombre']}
     return distancias
 
-# Código principal
-data_url = "https://raw.githubusercontent.com/gabrielawad/programacion-para-ingenieria/refs/heads/main/archivos-datos/aplicaciones/analisis_clientes.csv"
-df = cargar_datos(data_url)
-df = preprocesar_datos(df)  # Interpolación antes de su uso
-
-# Streamlit App
-st.title("Análisis de Clientes")
-st.write("Este dashboard interactivo permite analizar los datos de clientes y su comportamiento de compra.")
-
-# Mostrar análisis
-st.subheader("Correlación entre Edad e Ingreso Anual")
-st.write(analizar_correlacion(df))
-
-st.subheader("Gráfico de Barras por Género y Frecuencia de Compra")
-fig_bar, ax = plt.subplots()
-grafico_barras(df)
-st.pyplot(fig_bar)
-
-st.subheader("Mapa de Calor de Ingresos")
-fig_heat, ax = plt.subplots()
-mapa_calor(df)
-st.pyplot(fig_heat)
-
-st.subheader("Mapa de Ubicación de Clientes")
-fig_mapa = generar_mapa(df)
-st.plotly_chart(fig_mapa)
-
-st.subheader("Cálculo de Distancias entre Compradores de Mayores Ingresos")
-st.write(calcular_distancias(df))
+if __name__ == "__main__":
+    df = cargar_datos('analisis_clientes.csv')
+    correlacion_edad_ingreso(df)
+    correlacion_segmentada(df, 'Genero')
+    mapa_ubicacion(df).save('mapa_general.html')
+    clustering_frecuencia(df)
+    grafico_barras(df)
+    mapa_calor_ingresos(df)
+    print(calcular_distancias(df))
