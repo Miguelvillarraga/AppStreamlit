@@ -52,6 +52,11 @@ def grafico_barras(df):
 # Mapa de calor
 def mapa_calor(df):
     df = df.copy()  # Evita modificar el DataFrame original
+    df['Edad'] = pd.to_numeric(df['Edad'], errors='coerce')
+    df['Ingreso_Anual_USD'] = pd.to_numeric(df['Ingreso_Anual_USD'], errors='coerce')
+    df['Frecuencia_Compra'] = pd.to_numeric(df['Frecuencia_Compra'], errors='coerce')
+    df['Latitud'] = pd.to_numeric(df['Latitud'], errors='coerce')
+    df['Longitud'] = pd.to_numeric(df['Longitud'], errors='coerce')
     df = df.interpolate()  # Rellena valores NaN con interpolación
     df_numerico = df.select_dtypes(include=['number'])  # Filtrar solo columnas numéricas
     st.write(df.dtypes)
