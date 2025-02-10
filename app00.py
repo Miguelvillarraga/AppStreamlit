@@ -37,7 +37,7 @@ def analizar_correlacion(df):
 # Mapa de ubicación
 def generar_mapa(df, filtro=None):
     df_filtrado = df if filtro is None else df.query(filtro)
-    return px.scatter_mapbox(df_filtrado, lat='Latitud', lon='Longitud', color='Genero', zoom=3, mapbox_style='carto-positron')
+    return px.scatter_mapbox(df_filtrado, lat='Latitud', lon='Longitud', color='Género', zoom=3, mapbox_style='carto-positron')
 
 # Análisis de clúster
 def analizar_cluster(df):
@@ -47,7 +47,7 @@ def analizar_cluster(df):
 
 # Gráficos de barra
 def grafico_barras(df):
-    return sns.countplot(data=df, x='Genero', hue='Frecuencia_Compra')
+    return sns.countplot(data=df, x='Género', hue='Frecuencia_Compra')
 
 # Mapa de calor
 def mapa_calor(df):
@@ -57,7 +57,7 @@ def mapa_calor(df):
 
 # Cálculo de distancias
 def calcular_distancias(df):
-    compradores_altos = df.nlargest(5, 'Ingreso_Anual')
+    compradores_altos = df.nlargest(5, 'Ingreso_Anual_USD')
     distancias = squareform(pdist(compradores_altos[['Latitud', 'Longitud']]))
     return distancias
 
